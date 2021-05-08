@@ -48,6 +48,7 @@ target_sources( ${PROJECT_NAME} PRIVATE
     Dnn/Layers/FocalLossLayer.cpp
     Dnn/Layers/FullyConnectedLayer.cpp
     Dnn/Layers/FullyConnectedSourceLayer.cpp
+    Dnn/Layers/GatherLayer.cpp
     Dnn/Layers/GELULayer.cpp
     Dnn/Layers/GlobalMaxPoolingLayer.cpp
     Dnn/Layers/GlobalMeanPoolingLayer.cpp
