@@ -53,6 +53,7 @@ limitations under the License.
 #include <NeoML/Dnn/Layers/DropoutLayer.h>
 #include <NeoML/Dnn/Layers/ImageResizeLayer.h>
 #include <NeoML/Dnn/Layers/BackLinkLayer.h>
+#include <NeoML/Dnn/Layers/GatherLayer.h>
 #include <NeoML/TraditionalML/LdGraph.h>
 #include <NeoML/TraditionalML/SimpleGenerator.h>
 #include <NeoML/TraditionalML/GraphGenerator.h>
