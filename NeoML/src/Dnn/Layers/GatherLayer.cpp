@@ -1,4 +1,4 @@
-/* Copyright © 2017-2020 ABBYY Production LLC
+﻿/* Copyright © 2017-2020 ABBYY Production LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -65,9 +65,9 @@ void CGatherLayer::RunOnce()
     CPtr<const CDnnBlob> indexes = inputBlobs[1];
     CPtr<CDnnBlob> result = outputBlobs[0];
 
-    if( arePaddingsUsed ) {
-        static_assert( false, "Add padding vector and shift indexes by one" );
-    }
+    // if( arePaddingsUsed ) {
+    //     static_assert( false, "Add padding vector and shift indexes by one" );
+    // }
 
     // Shifting indexes to make it flat
     CFloatHandleStackVar shiftedIndexes( MathEngine(), indexes->GetDataSize() );
@@ -85,9 +85,9 @@ void CGatherLayer::BackwardOnce()
     CPtr<CDnnBlob> weightsDiff = inputDiffBlobs[0];
     CPtr<CDnnBlob> indexes = inputBlobs[1];
 
-    if( arePaddingsUsed ) {
-        static_assert( false, "Shift indexes by one and add place for padding diff" );
-    }
+    // if( arePaddingsUsed ) {
+    //     static_assert( false, "Shift indexes by one and add place for padding diff" );
+    // }
 
     const CDnnBlob* resultDiff = outputDiffBlobs[0];
     NeoAssert( resultDiff != nullptr );
@@ -105,9 +105,9 @@ void CGatherLayer::BackwardOnce()
         &weightsDiff->GetData(), &dims, 1, learningRate,
         resultDiff->GetData(), resultDiff->GetObjectSize() );
 
-    if( arePaddingsUsed ) {
-        static_assert( false, "Remove padding diff from weightsDiff" );
-    }
+    // if( arePaddingsUsed ) {
+    //     static_assert( false, "Remove padding diff from weightsDiff" );
+    // }
 }
 
 // Converting in-sample indexes to global in batch for lookup operation

@@ -38,7 +38,7 @@ public:
 
     // Control whether use paddings or not (it has additional performance cost).
     // Padding is an index with value -1.
-    void SetUsePaddings( bool enable ) { arePaddingsUsed = enable; }
+    void SetUsePaddings( bool enable ) { NeoAssert( false ); arePaddingsUsed = enable; }
     bool ArePaddingsUsed() const { return arePaddingsUsed; }
 
 	void Serialize( CArchive& archive ) override;
