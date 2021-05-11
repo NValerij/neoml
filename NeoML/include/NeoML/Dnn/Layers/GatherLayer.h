@@ -51,7 +51,7 @@ protected:
 private:
     bool arePaddingsUsed = false;
 
-    void flatternIndexes( const CDnnBlob& indexes, int weightsBatchLength, CFloatHandleStackVar& result ) const;
+    void flatternIndexes( const CDnnBlob& indexes, CFloatHandleStackVar& result ) const;
 };
 
 NEOML_API CLayerWrapper<CGatherLayer> Gather();

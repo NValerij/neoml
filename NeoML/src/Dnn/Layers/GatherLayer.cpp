@@ -71,7 +71,7 @@ void CGatherLayer::RunOnce()
 
     // Shifting indexes to make it flat
     CFloatHandleStackVar shiftedIndexes( MathEngine(), indexes->GetDataSize() );
-    flatternIndexes( *indexes, weights->GetBatchLength(), shiftedIndexes );
+    flatternIndexes( *indexes, shiftedIndexes );
 
     // Copying data to output table
     CLookupDimension dims{ weights->GetObjectCount(), weights->GetObjectSize() };
@@ -94,7 +94,7 @@ void CGatherLayer::BackwardOnce()
 
     // Shifting indexes to make it flat
     CFloatHandleStackVar shiftedIndexes( MathEngine(), indexes->GetDataSize() );
-    flatternIndexes( *indexes, weightsDiff->GetBatchLength(), shiftedIndexes );
+    flatternIndexes( *indexes, shiftedIndexes );
 
     // Gathering gradients for used vectors
     CLookupDimension dims{ weightsDiff->GetObjectCount(), weightsDiff->GetObjectSize() };
@@ -112,24 +112,22 @@ void CGatherLayer::BackwardOnce()
 
 // Converting in-sample indexes to global in batch for lookup operation
 // (like lookup in 2-D embeddings table).
-void CGatherLayer::flatternIndexes( const CDnnBlob& indexes, int weightsBatchLength, CFloatHandleStackVar& result ) const
+void CGatherLayer::flatternIndexes( const CDnnBlob& indexes, CFloatHandleStackVar& result ) const
 {
     NeoAssert( result.Size() == indexes.GetDataSize() );
 
-    // i-th row contains from i-th item from every sample.
-    // every j-th sample has indexes shifted by j * batch_length (sample length)
-    CFloatHandleStackVar inRowShifts( MathEngine(), indexes.GetBatchLength() );
-    CArray<float> shiftValues;
-    shiftValues.Add( static_cast<float>( weightsBatchLength ), indexes.GetBatchLength() );
-    shiftValues[0] = 0.f;
-    for (int i = 1; i < shiftValues.Size(); i++)
-    {
-        shiftValues[i] += shiftValues[i - 1];
-    }
-    MathEngine().DataExchangeTyped( inRowShifts.GetHandle(), shiftValues.GetPtr(), shiftValues.Size() );
+    // Every sample index is shifted by total samples count because they are group the way
+    // then first (second, etc.) elements of every sample goes alltogether.
+    CFloatHandleStackVar shifts( MathEngine() );
+    shifts.SetValue( static_cast<float>( indexes.GetBatchWidth() ) ); // by total samples in batch (same for weights and indexes)
+    MathEngine().VectorMultiply( indexes.GetData(), result, result.Size(), shifts );
 
-    MathEngine().AddVectorToMatrixRows( 1, indexes.GetData(),
-        result, indexes.GetBatchLength(), indexes.GetBatchWidth(), inRowShifts );
+    // Tricky operation which adds its column number to every element.
+    // Allow us to distinguish different samples in a single row.
+    CBlobDesc desc = indexes.GetDesc();
+    desc.SetDimSize( BD_Width, indexes.GetBatchWidth() );
+    desc.SetDimSize( BD_BatchWidth, 1 );
+    MathEngine().AddWidthIndex( desc, result, true, result );
 }
 
 CLayerWrapper<CGatherLayer> Gather()
