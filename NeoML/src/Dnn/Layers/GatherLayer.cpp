@@ -1,4 +1,4 @@
-﻿/* Copyright © 2017-2020 ABBYY Production LLC
+/* Copyright © 2017-2020 ABBYY Production LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -120,7 +120,7 @@ void CGatherLayer::flatternIndexes( const CDnnBlob& indexes, int weightsBatchLen
     // every j-th sample has indexes shifted by j * batch_length (sample length)
     CFloatHandleStackVar inRowShifts( MathEngine(), indexes.GetBatchLength() );
     CArray<float> shiftValues;
-    shiftValues.Add( weightsBatchLength, indexes.GetBatchLength() );
+    shiftValues.Add( static_cast<float>( weightsBatchLength ), indexes.GetBatchLength() );
     shiftValues[0] = 0.f;
     for (int i = 1; i < shiftValues.Size(); i++)
     {
