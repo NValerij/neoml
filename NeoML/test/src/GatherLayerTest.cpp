@@ -93,21 +93,28 @@ TEST(CGatherLayerTest, Backward)
 	dnn.GetSolver()->SetLearningRate( 1.f );
 
 	// Simplest DNN
-	auto weights = Source( dnn, "weights" );
+	auto input = Source( dnn, "input" );
 	auto indexes = Source( dnn, "indexes" );
-	// тут нужен какой-то обучаемый слой. Например, lookup
-	auto gather = Gather()( "gathering", weights, indexes );
+	// Some trainable layer before Gather-layer
+	auto lookup = MultichannelLookup( { CLookupDimension( 4, 1 ) }, true )( "lookup", input );
+	auto gather = Gather()( "gathering", lookup, indexes );
 	auto etalon = Source( dnn, "etalon" );
 	BinaryCrossEntropyLoss()( gather, etalon );
 
 	// Data
-	weights->SetBlob( packData( engine, 2, 2, 1, {
-		1.f, 2.f,
-		3.f, 4.f
+	input->SetBlob( packData( engine, 2, 2, 1, {
+		0.f, 2.f,
+		1.f, 3.f
 	} ) );
+	lookup->SetEmbeddings( packData( engine, 4, 1, 1, {
+		1.f, 2.f, 3.f, 4.f
+	} ), 0 );
+	// After lookup will be blob:
+	// 1.f,   2.f,
+	// 3.f,   4.f
 	indexes->SetBlob( packData( engine, 1, 2, 1, {
-		1.f,
-		0.f
+		1.f, // blob[0][1] -> 3.f
+		0.f  // lookup[1][0] -> 2.f
 	} ) );
 	etalon->SetBlob( packData( engine, 1, 2, 1, {
 		-3.f,
@@ -118,7 +125,7 @@ TEST(CGatherLayerTest, Backward)
 	dnn.RunAndLearnOnce();
 
 	// Getting updated weights
-	auto resultsBlob = weights->GetBlob();
+	auto resultsBlob = lookup->GetEmbeddings( 0 );
 	ASSERT_EQ( 4, resultsBlob->GetDataSize() );
 
 	CArray<float> results;
