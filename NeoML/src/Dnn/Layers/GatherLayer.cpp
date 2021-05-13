@@ -65,9 +65,8 @@ void CGatherLayer::RunOnce()
     CPtr<const CDnnBlob> indexes = inputBlobs[1];
     CPtr<CDnnBlob> result = outputBlobs[0];
 
-    // if( arePaddingsUsed ) {
-    //     static_assert( false, "Add padding vector and shift indexes by one" );
-    // }
+    // Replace weights and indexes with padded version if paddings are enabled.
+    addOptionalPaddings( weights, indexes );
 
     // Shifting indexes to make it flat
     CFloatHandleStackVar shiftedIndexes( MathEngine(), indexes->GetDataSize() );
@@ -83,11 +82,10 @@ void CGatherLayer::RunOnce()
 void CGatherLayer::BackwardOnce()
 {
     CPtr<CDnnBlob> weightsDiff = inputDiffBlobs[0];
-    CPtr<CDnnBlob> indexes = inputBlobs[1];
+    CPtr<const CDnnBlob> indexes = inputBlobs[1];
 
-    // if( arePaddingsUsed ) {
-    //     static_assert( false, "Shift indexes by one and add place for padding diff" );
-    // }
+    // Replace weights and indexes with padded version if paddings are enabled.
+    addOptionalPaddings( weightsDiff, indexes );
 
     const CDnnBlob* resultDiff = outputDiffBlobs[0];
     NeoAssert( resultDiff != nullptr );
@@ -105,9 +103,35 @@ void CGatherLayer::BackwardOnce()
         &weightsDiff->GetData(), &dims, 1, learningRate,
         resultDiff->GetData(), resultDiff->GetObjectSize() );
 
-    // if( arePaddingsUsed ) {
-    //     static_assert( false, "Remove padding diff from weightsDiff" );
-    // }
+    if( arePaddingsUsed ) {
+        static_assert( false, "Remove padding diff from weightsDiff" );
+    }
+}
+
+// Adding padding vector to weights and shifting indexes by one if paddings are enabled.
+void CGatherLayer::addOptionalPaddings( CPtr<const CDnnBlob>& weights, CPtr<const CDnnBlob>& indexes ) const
+{
+    if( !arePaddingsUsed ) {
+        return;
+    }
+
+    // Adding a zero padding vector at first place
+    CBlobDesc desc = weights->GetDesc();
+    desc.SetDimSize( BD_BatchLength, 1 );
+    desc.SetDimSize( BD_BatchWidth, 1 + weights->GetObjectCount() );
+    CPtr<CDnnBlob> weightsEx = CDnnBlob::CreateBlob( MathEngine(), desc );
+    // Zero padding vector
+    MathEngine().VectorFill( weightsEx->GetData(), 0.f, weights->GetObjectSize() );
+    // Other weights
+    MathEngine().VectorCopy( weightsEx->GetObjectData( 1 ), weights->GetData(), weights->GetDataSize() );
+    weights = weightsEx;
+
+    // Shifting indexes by one
+    CPtr<CDnnBlob> shiftedIndexes = indexes->GetClone();
+    CFloatHandleStackVar one( MathEngine() );
+    one.SetValue( 1.f );
+    MathEngine().VectorAddValue( indexes->GetData(), shiftedIndexes->GetData(), indexes->GetDataSize(), one );
+    indexes = shiftedIndexes;
 }
 
 // Converting in-sample indexes to global in batch for lookup operation
