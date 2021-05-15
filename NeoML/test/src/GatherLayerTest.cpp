@@ -49,6 +49,8 @@ TEST(CGatherLayerTest, Forward)
 	auto gather = Gather()( "gathering", weights, indexes );
 	auto sink = Sink( gather, "sink" );
 
+	ASSERT_FALSE( gather->ArePaddingsEnabled() );
+
 	// Data
 	weights->SetBlob( packData( engine, 3, 2, 1, {
 		1.f,   2.f,
@@ -137,4 +139,52 @@ TEST(CGatherLayerTest, Backward)
 	EXPECT_NE( 2.f, results[1] );
 	EXPECT_NE( 3.f, results[2] );
 	EXPECT_FLOAT_EQ( 4.f, results[3] ); // no update
+}
+
+TEST(CGatherLayerTest, PaddedForward)
+{
+	IMathEngine& engine = GetSingleThreadCpuMathEngine();
+	CRandom random;
+	CDnn dnn( random, engine);
+
+	// Simplest forward only DNN
+	auto weights = Source( dnn, "weights" );
+	auto indexes = Source( dnn, "indexes" );
+	auto gather = Gather()( "gathering", weights, indexes );
+	auto sink = Sink( gather, "sink" );
+
+	gather->EnablePaddings();
+	ASSERT_TRUE( gather->ArePaddingsEnabled() );
+
+	// Data
+	weights->SetBlob( packData( engine, 3, 2, 1, {
+		1.f,   2.f,
+		3.f,   4.f,
+		5.f,   6.f
+	} ) );
+	indexes->SetBlob( packData( engine, 2, 2, 1, {
+		0.f,   1.f,
+		-1.f,  0.f
+	} ) );
+
+	// Forward pass
+	dnn.RunOnce();
+
+	// Getting results
+	auto resultsBlob = sink->GetBlob();
+	ASSERT_EQ( 4, resultsBlob->GetDataSize() );
+
+	CArray<float> results;
+	results.SetSize( resultsBlob->GetDataSize() );
+	resultsBlob->CopyTo( results.GetPtr(), results.Size() );
+
+	// Checking
+	const CArray<float> expected = {
+		1.f,   4.f,
+		0.f,   2.f
+	};
+	for (int i = 0; i < expected.Size(); i++)
+	{
+		EXPECT_FLOAT_EQ( expected[i], results[i] ) << "at i = " << i;
+	}
 }
