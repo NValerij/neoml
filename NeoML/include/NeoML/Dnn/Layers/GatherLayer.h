@@ -38,8 +38,8 @@ public:
 
     // Control whether use paddings or not (it has additional performance cost).
     // Padding is an index with value -1.
-    void SetUsePaddings( bool enable ) { arePaddingsUsed = enable; }
-    bool ArePaddingsUsed() const { return arePaddingsUsed; }
+    void EnablePaddings( bool enable = true ) { arePaddingsUsed = enable; }
+    bool ArePaddingsEnabled() const { return arePaddingsUsed; }
 
 	void Serialize( CArchive& archive ) override;
 
@@ -51,7 +51,7 @@ protected:
 private:
     bool arePaddingsUsed = false;
 
-    void addOptionalPaddings( CPtr<const CDnnBlob>& weights, CPtr<const CDnnBlob>& indexes ) const;
+    void addOptionalPaddings( CPtr<CDnnBlob>& weights, CPtr<const CDnnBlob>& indexes ) const;
     void flatternIndexes( const CDnnBlob& indexes, CFloatHandleStackVar& result ) const;
 };
 

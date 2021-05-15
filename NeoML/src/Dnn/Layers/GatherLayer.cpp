@@ -61,9 +61,9 @@ void CGatherLayer::Reshape()
 
 void CGatherLayer::RunOnce()
 {
-    CPtr<const CDnnBlob> weights = inputBlobs[0];
+    CPtr<CDnnBlob> weights = inputBlobs[0];
     CPtr<const CDnnBlob> indexes = inputBlobs[1];
-    CPtr<CDnnBlob> result = outputBlobs[0];
+    const CPtr<CDnnBlob>& result = outputBlobs[0];
 
     // Replace weights and indexes with padded version if paddings are enabled.
     addOptionalPaddings( weights, indexes );
@@ -76,7 +76,7 @@ void CGatherLayer::RunOnce()
     CLookupDimension dims{ weights->GetObjectCount(), weights->GetObjectSize() };
     MathEngine().VectorMultichannelLookupAndCopy(
         indexes->GetDataSize(), 1, shiftedIndexes,
-        &weights->GetData(), &dims, 1, result->GetData(), result->GetObjectSize() );
+        &weights->GetData<const float>(), &dims, 1, result->GetData(), result->GetObjectSize() );
 }
 
 void CGatherLayer::BackwardOnce()
@@ -104,12 +104,13 @@ void CGatherLayer::BackwardOnce()
         resultDiff->GetData(), resultDiff->GetObjectSize() );
 
     if( arePaddingsUsed ) {
-        static_assert( false, "Remove padding diff from weightsDiff" );
+        // Removing paddings diff from weightsDiff
+        MathEngine().VectorCopy( inputDiffBlobs[0]->GetData(), weightsDiff->GetObjectData( 1 ), inputDiffBlobs[0]->GetDataSize() );
     }
 }
 
 // Adding padding vector to weights and shifting indexes by one if paddings are enabled.
-void CGatherLayer::addOptionalPaddings( CPtr<const CDnnBlob>& weights, CPtr<const CDnnBlob>& indexes ) const
+void CGatherLayer::addOptionalPaddings( CPtr<CDnnBlob>& weights, CPtr<const CDnnBlob>& indexes ) const
 {
     if( !arePaddingsUsed ) {
         return;
