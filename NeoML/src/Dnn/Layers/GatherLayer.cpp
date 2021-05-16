@@ -115,16 +115,16 @@ void CGatherLayer::addOptionalPaddings( CPtr<CDnnBlob>& weights, CPtr<const CDnn
     if( !arePaddingsUsed ) {
         return;
     }
+    const int samplesCount = weights->GetBatchWidth();
 
     // Adding a zero padding vector at first place
     CBlobDesc desc = weights->GetDesc();
-    desc.SetDimSize( BD_BatchLength, 1 );
-    desc.SetDimSize( BD_BatchWidth, 1 + weights->GetObjectCount() );
+    desc.SetDimSize( BD_BatchLength, 1 + weights->GetBatchLength() );
     CPtr<CDnnBlob> weightsEx = CDnnBlob::CreateBlob( MathEngine(), desc );
-    // Zero padding vector
-    MathEngine().VectorFill( weightsEx->GetData(), 0.f, weights->GetObjectSize() );
-    // Other weights
-    MathEngine().VectorCopy( weightsEx->GetObjectData( 1 ), weights->GetData(), weights->GetDataSize() );
+    // Zero padding vector for every single sample
+    MathEngine().VectorFill( weightsEx->GetData(), 0.f, samplesCount * weights->GetObjectSize() );
+    // Other weights (after first padding element)
+    MathEngine().VectorCopy( weightsEx->GetObjectData( samplesCount ), weights->GetData(), weights->GetDataSize() );
     weights = weightsEx;
 
     // Shifting indexes by one
