@@ -104,8 +104,10 @@ void CGatherLayer::BackwardOnce()
         resultDiff->GetData(), resultDiff->GetObjectSize() );
 
     if( arePaddingsUsed ) {
-        // Removing paddings diff from weightsDiff
-        MathEngine().VectorCopy( inputDiffBlobs[0]->GetData(), weightsDiff->GetObjectData( 1 ), inputDiffBlobs[0]->GetDataSize() );
+        // Removing paddings diff from weightsDiff (first object in each sample)
+        const int samplesCount = weightsDiff->GetBatchWidth();
+        const auto afterPaddingsPtr = weightsDiff->GetObjectData( samplesCount );
+        MathEngine().VectorCopy( inputDiffBlobs[0]->GetData(), afterPaddingsPtr, inputDiffBlobs[0]->GetDataSize() );
     }
 }
 

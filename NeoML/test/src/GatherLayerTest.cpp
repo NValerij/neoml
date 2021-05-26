@@ -188,3 +188,63 @@ TEST(CGatherLayerTest, PaddedForward)
 		EXPECT_FLOAT_EQ( expected[i], results[i] ) << "at i = " << i;
 	}
 }
+
+TEST(CGatherLayerTest, PaddedBackward)
+{
+	IMathEngine& engine = GetSingleThreadCpuMathEngine();
+	CRandom random;
+	CDnn dnn( random, engine);
+
+	// Solver
+	dnn.SetSolver( new CDnnSimpleGradientSolver( engine ) );
+	dnn.GetSolver()->SetLearningRate( 1.f );
+
+	// Simplest DNN
+	auto input = Source( dnn, "input" );
+	auto indexes = Source( dnn, "indexes" );
+	// Some trainable layer before Gather-layer
+	auto lookup = MultichannelLookup( { CLookupDimension( 4, 1 ) }, true )( "lookup", input );
+	auto gather = Gather()( "gathering", lookup, indexes );
+	auto etalon = Source( dnn, "etalon" );
+	BinaryCrossEntropyLoss()( gather, etalon );
+
+	gather->EnablePaddings();
+	ASSERT_TRUE( gather->ArePaddingsEnabled() );
+
+	// Data
+	input->SetBlob( packData( engine, 2, 2, 1, {
+		0.f,   2.f,
+		1.f,   3.f
+	} ) );
+	lookup->SetEmbeddings( packData( engine, 4, 1, 1, {
+		1.f, 2.f, 3.f, 4.f
+	} ), 0 );
+	// After lookup will be blob:
+	// 1.f,   3.f,
+	// 2.f,   4.f
+	indexes->SetBlob( packData( engine, 2, 2, 1, {
+		1.f,   -1.f, // blob[0][1] -> 2.f
+		-1.f,   0.f  // blob[1][0] -> 3.f
+	} ) );
+	etalon->SetBlob( packData( engine, 2, 2, 1, {
+		-2.f,   0.f,
+		0.f,   -3.f
+	} ) );
+
+	// Forward pass
+	dnn.RunAndLearnOnce();
+
+	// Getting updated weights
+	auto resultsBlob = lookup->GetEmbeddings( 0 );
+	ASSERT_EQ( 4, resultsBlob->GetDataSize() );
+
+	CArray<float> results;
+	results.SetSize( resultsBlob->GetDataSize() );
+	resultsBlob->CopyTo( results.GetPtr(), results.Size() );
+
+	// Checking
+	EXPECT_FLOAT_EQ( 1.f, results[0] ); // no update
+	EXPECT_NE( 2.f, results[1] );
+	EXPECT_NE( 3.f, results[2] );
+	EXPECT_FLOAT_EQ( 4.f, results[3] ); // no update
+}
