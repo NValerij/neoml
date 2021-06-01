@@ -273,6 +273,7 @@ delete gpuMathEngine;
   - Repeating data:
     - [CRepeatSequenceLayer](RepeatSequenceLayer.md) repeats sequences several times
     - [CUpsampling2DLayer](Upsampling2DLayer.md) scales up two-dimensional images
+  - [CGatherLayer](GatherLayer.md) layer for picking up elements of some sequence by its indexes
   - [CReorgLayer](ReorgLayer.md) transforms a multi-channel image into several smaller images with more channels
 - Loss functions:
   - For binary classification:
