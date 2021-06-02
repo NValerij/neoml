@@ -74,9 +74,10 @@ void CGatherLayer::RunOnce()
 
     // Copying data to output table
     CLookupDimension dims{ weights->GetObjectCount(), weights->GetObjectSize() };
+    CConstFloatHandle lookup = weights->GetData<const float>();
     MathEngine().VectorMultichannelLookupAndCopy(
         indexes->GetDataSize(), 1, shiftedIndexes,
-        &weights->GetData<const float>(), &dims, 1, result->GetData(), result->GetObjectSize() );
+        &lookup, &dims, 1, result->GetData(), result->GetObjectSize() );
 }
 
 void CGatherLayer::BackwardOnce()
@@ -98,9 +99,10 @@ void CGatherLayer::BackwardOnce()
     CLookupDimension dims{ weightsDiff->GetObjectCount(), weightsDiff->GetObjectSize() };
     CFloatHandleStackVar learningRate( MathEngine() );
     learningRate.SetValue( CBaseLayer::GetBaseLearningRate() );
+    CFloatHandle lookup = weightsDiff->GetData();
     MathEngine().VectorMultichannelLookupAndAddToTable(
         indexes->GetDataSize(), 1, shiftedIndexes,
-        &weightsDiff->GetData(), &dims, 1, learningRate,
+        &lookup, &dims, 1, learningRate,
         resultDiff->GetData(), resultDiff->GetObjectSize() );
 
     if( arePaddingsUsed ) {
